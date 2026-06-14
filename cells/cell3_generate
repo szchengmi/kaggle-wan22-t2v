@@ -47,18 +47,18 @@ def build_t2v_workflow(prompt, neg_prompt, width, height, frames, steps, cfg, se
     lat_h = height // 8
     lat_frames = (frames - 1) // 4 + 1
     return {
-        "3": {"class_type": "WanVideoModelLoader", "widgets_values": [MODEL_PATH, VAE_PATH, CLIP_PATH, "wan", "fp16", "disabled"]},
-        "4": {"class_type": "WanVideoTextEncode", "widgets_values": [prompt, neg_prompt]},
-        "5": {"class_type": "WanVideoImageToVideoEncode", "widgets_values": [width, height, frames, lat_w, lat_h, lat_frames, None, "disabled"]},
-        "6": {"class_type": "WanVideoSampler", "widgets_values": [seed, steps, cfg, SAMPLER, SCHEDULER, SHIFT, 1.0, "disabled"]},
-        "7": {"class_type": "WanVideoDecode", "widgets_values": ["true"]},
-        "8": {"class_type": "VHS_VideoCombine", "widgets_values": [FPS, 0, "output", "video", "h264-mp4", "false", "true", width, height]},
-        "links": [[3, 0, 5, 3, 0], [3, 1, 4, 0, 0], [3, 2, 4, 1, 0],
-                  [4, 0, 5, 0, 0], [4, 1, 5, 1, 0], [3, 0, 6, 0, 0],
-                  [5, 0, 6, 1, 0], [5, 1, 6, 2, 0], [6, 0, 7, 0, 0],
-                  [7, 0, 8, 0, 0]],
-        "last_node_id": 8,
-        "last_link_id": 9
+        "3": {"class_type": "UnetLoaderGGUF", "widgets_values": [MODEL_PATH]},
+        "4": {"class_type": "CLIPLoaderGGUF", "widgets_values": [CLIP_PATH, "wan"]},
+        "5": {"class_type": "VAELoader", "widgets_values": [VAE_PATH]},
+        "6": {"class_type": "WanImageToVideo", "widgets_values": [prompt, neg_prompt, width, height, frames, lat_w, lat_h, lat_frames, None, "disabled"]},
+        "7": {"class_type": "KSampler", "widgets_values": [seed, steps, cfg, SAMPLER, SCHEDULER, SHIFT]},
+        "8": {"class_type": "VAEDecode", "widgets_values": []},
+        "9": {"class_type": "VHS_VideoCombine", "widgets_values": [FPS, 0, "output", "video", "h264-mp4", "false", "true", width, height]},
+        "links": [[3, 0, 7, 0, 0], [4, 0, 6, 0, 0], [4, 1, 6, 1, 0],
+                  [5, 0, 8, 0, 0], [6, 0, 7, 1, 0], [6, 1, 7, 2, 0],
+                  [7, 0, 8, 0, 0], [8, 0, 9, 0, 0]],
+        "last_node_id": 9,
+        "last_link_id": 8
     }
 
 
@@ -67,18 +67,18 @@ def build_ti2v_workflow(prompt, neg_prompt, width, height, frames, steps, cfg, s
     lat_h = height // 8
     lat_frames = (frames - 1) // 4 + 1
     return {
-        "3": {"class_type": "WanVideoModelLoader", "widgets_values": [MODEL_PATH, VAE_PATH, CLIP_PATH, "wan", "fp16", "disabled"]},
-        "4": {"class_type": "WanVideoTextEncode", "widgets_values": [prompt, neg_prompt]},
-        "5": {"class_type": "LoadImage", "widgets_values": [start_image]},
-        "6": {"class_type": "WanVideoImageToVideoEncode", "widgets_values": [width, height, frames, lat_w, lat_h, lat_frames, None, "disabled"]},
-        "7": {"class_type": "WanVideoSampler", "widgets_values": [seed, steps, cfg, SAMPLER, SCHEDULER, SHIFT, 1.0, "disabled"]},
-        "8": {"class_type": "WanVideoDecode", "widgets_values": ["true"]},
-        "9": {"class_type": "VHS_VideoCombine", "widgets_values": [FPS, 0, "output", "video", "h264-mp4", "false", "true", width, height]},
-        "links": [[3, 0, 6, 3, 0], [3, 1, 4, 0, 0], [3, 2, 4, 1, 0],
-                  [4, 0, 6, 0, 0], [4, 1, 6, 1, 0], [5, 0, 6, 2, 0],
-                  [3, 0, 7, 0, 0], [6, 0, 7, 1, 0], [6, 1, 7, 2, 0],
-                  [7, 0, 8, 0, 0], [8, 0, 9, 0, 0]],
-        "last_node_id": 9,
+        "3": {"class_type": "UnetLoaderGGUF", "widgets_values": [MODEL_PATH]},
+        "4": {"class_type": "CLIPLoaderGGUF", "widgets_values": [CLIP_PATH, "wan"]},
+        "5": {"class_type": "VAELoader", "widgets_values": [VAE_PATH]},
+        "6": {"class_type": "LoadImage", "widgets_values": [start_image]},
+        "7": {"class_type": "WanImageToVideo", "widgets_values": [prompt, neg_prompt, width, height, frames, lat_w, lat_h, lat_frames, None, "disabled"]},
+        "8": {"class_type": "KSampler", "widgets_values": [seed, steps, cfg, SAMPLER, SCHEDULER, SHIFT]},
+        "9": {"class_type": "VAEDecode", "widgets_values": []},
+        "10": {"class_type": "VHS_VideoCombine", "widgets_values": [FPS, 0, "output", "video", "h264-mp4", "false", "true", width, height]},
+        "links": [[3, 0, 8, 0, 0], [4, 0, 7, 0, 0], [4, 1, 7, 1, 0],
+                  [5, 0, 9, 0, 0], [6, 0, 7, 2, 0], [7, 0, 8, 1, 0],
+                  [7, 1, 8, 2, 0], [8, 0, 9, 0, 0], [9, 0, 10, 0, 0]],
+        "last_node_id": 10,
         "last_link_id": 9
     }
 

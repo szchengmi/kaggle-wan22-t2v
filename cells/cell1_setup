@@ -10,9 +10,5 @@
 !unzip -qo /tmp/gguf.zip -d custom_nodes/
 !mv custom_nodes/ComfyUI-GGUF-main custom_nodes/ComfyUI-GGUF
 !rm /tmp/gguf.zip
-!curl -sL "https://github.com/Kinkariari/WanVideoWrapper/archive/refs/heads/main.zip" -o /tmp/wvw.zip
-!unzip -qo /tmp/wvw.zip -d custom_nodes/
-!mv custom_nodes/WanVideoWrapper-main custom_nodes/WanVideoWrapper
-!rm /tmp/wvw.zip
 !ls custom_nodes/
 print("✅ 安装完成")
