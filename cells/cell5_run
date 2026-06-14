@@ -1,0 +1,2 @@
+%cd /kaggle/working/ComfyUI
+%run generate_15s.py

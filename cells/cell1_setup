@@ -1,0 +1,18 @@
+!pip install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+!curl -sL "https://github.com/comfyanonymous/ComfyUI/archive/refs/heads/master.zip" -o /tmp/comfyui.zip
+!unzip -qo /tmp/comfyui.zip -d /kaggle/working/
+!mv /kaggle/working/ComfyUI-master /kaggle/working/ComfyUI
+!rm /tmp/comfyui.zip
+%cd /kaggle/working/ComfyUI
+!pip install -q -r requirements.txt
+!pip install -q xformers gguf accelerate Pillow
+!curl -sL "https://github.com/city96/ComfyUI-GGUF/archive/refs/heads/main.zip" -o /tmp/gguf.zip
+!unzip -qo /tmp/gguf.zip -d custom_nodes/
+!mv custom_nodes/ComfyUI-GGUF-main custom_nodes/ComfyUI-GGUF
+!rm /tmp/gguf.zip
+!curl -sL "https://github.com/Kinkariari/WanVideoWrapper/archive/refs/heads/main.zip" -o /tmp/wvw.zip
+!unzip -qo /tmp/wvw.zip -d custom_nodes/
+!mv custom_nodes/WanVideoWrapper-main custom_nodes/WanVideoWrapper
+!rm /tmp/wvw.zip
+!ls custom_nodes/
+print("✅ 安装完成")

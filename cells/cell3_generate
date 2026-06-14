@@ -1,0 +1,170 @@
+%%writefile /kaggle/working/ComfyUI/generate_15s.py
+import json, time, os, sys, urllib.request, subprocess
+
+COMFYUI_URL = "http://127.0.0.1:8188"
+OUTPUT_DIR = "/kaggle/working/output"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+PROMPT = "A cinematic scene, high quality, detailed, smooth motion"
+NEGATIVE_PROMPT = "blurry, distorted, low quality, watermark, text"
+WIDTH = 846
+HEIGHT = 480
+FPS = 8
+SEGMENT1_FRAMES = 85
+SEGMENT2_FRAMES = 50
+SEGMENT1_STEPS = 20
+SEGMENT2_STEPS = 20
+CFG = 5.0
+SAMPLER = "dpmpp_2m"
+SCHEDULER = "karras"
+SHIFT = 8
+SEED = 42
+
+MODEL_PATH = "models/diffusion_models/Wan2.2-TI2V-5B-Q4_K_M.gguf"
+CLIP_PATH = "models/text_encoders/umt5-xxl-encoder-Q4_K_M.gguf"
+VAE_PATH = "models/vae/Wan2.2_VAE.safetensors"
+
+
+def queue_prompt(workflow, client_id="kaggle-wan22"):
+    payload = json.dumps({"prompt": workflow, "client_id": client_id}).encode()
+    req = urllib.request.Request(
+        f"{COMFYUI_URL}/prompt",
+        data=payload,
+        headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=600) as resp:
+        return json.loads(resp.read())
+
+
+def get_history(prompt_id):
+    req = urllib.request.Request(f"{COMFYUI_URL}/history/{prompt_id}")
+    with urllib.request.urlopen(req) as resp:
+        return json.loads(resp.read())
+
+
+def build_t2v_workflow(prompt, neg_prompt, width, height, frames, steps, cfg, seed):
+    lat_w = width // 8
+    lat_h = height // 8
+    lat_frames = (frames - 1) // 4 + 1
+    return {
+        "3": {"class_type": "WanVideoModelLoader", "widgets_values": [MODEL_PATH, VAE_PATH, CLIP_PATH, "wan", "fp16", "disabled"]},
+        "4": {"class_type": "WanVideoTextEncode", "widgets_values": [prompt, neg_prompt]},
+        "5": {"class_type": "WanVideoImageToVideoEncode", "widgets_values": [width, height, frames, lat_w, lat_h, lat_frames, None, "disabled"]},
+        "6": {"class_type": "WanVideoSampler", "widgets_values": [seed, steps, cfg, SAMPLER, SCHEDULER, SHIFT, 1.0, "disabled"]},
+        "7": {"class_type": "WanVideoDecode", "widgets_values": ["true"]},
+        "8": {"class_type": "VHS_VideoCombine", "widgets_values": [FPS, 0, "output", "video", "h264-mp4", "false", "true", width, height]},
+        "links": [[3, 0, 5, 3, 0], [3, 1, 4, 0, 0], [3, 2, 4, 1, 0],
+                  [4, 0, 5, 0, 0], [4, 1, 5, 1, 0], [3, 0, 6, 0, 0],
+                  [5, 0, 6, 1, 0], [5, 1, 6, 2, 0], [6, 0, 7, 0, 0],
+                  [7, 0, 8, 0, 0]],
+        "last_node_id": 8,
+        "last_link_id": 9
+    }
+
+
+def build_ti2v_workflow(prompt, neg_prompt, width, height, frames, steps, cfg, seed, start_image):
+    lat_w = width // 8
+    lat_h = height // 8
+    lat_frames = (frames - 1) // 4 + 1
+    return {
+        "3": {"class_type": "WanVideoModelLoader", "widgets_values": [MODEL_PATH, VAE_PATH, CLIP_PATH, "wan", "fp16", "disabled"]},
+        "4": {"class_type": "WanVideoTextEncode", "widgets_values": [prompt, neg_prompt]},
+        "5": {"class_type": "LoadImage", "widgets_values": [start_image]},
+        "6": {"class_type": "WanVideoImageToVideoEncode", "widgets_values": [width, height, frames, lat_w, lat_h, lat_frames, None, "disabled"]},
+        "7": {"class_type": "WanVideoSampler", "widgets_values": [seed, steps, cfg, SAMPLER, SCHEDULER, SHIFT, 1.0, "disabled"]},
+        "8": {"class_type": "WanVideoDecode", "widgets_values": ["true"]},
+        "9": {"class_type": "VHS_VideoCombine", "widgets_values": [FPS, 0, "output", "video", "h264-mp4", "false", "true", width, height]},
+        "links": [[3, 0, 6, 3, 0], [3, 1, 4, 0, 0], [3, 2, 4, 1, 0],
+                  [4, 0, 6, 0, 0], [4, 1, 6, 1, 0], [5, 0, 6, 2, 0],
+                  [3, 0, 7, 0, 0], [6, 0, 7, 1, 0], [6, 1, 7, 2, 0],
+                  [7, 0, 8, 0, 0], [8, 0, 9, 0, 0]],
+        "last_node_id": 9,
+        "last_link_id": 9
+    }
+
+
+def extract_last_frame(video_path, output_path):
+    cmd = ["ffmpeg", "-y", "-sseof", "-0.1", "-i", video_path, "-frames:v", "1", "-q:v", "2", output_path]
+    subprocess.run(cmd, capture_output=True, text=True)
+    return os.path.exists(output_path)
+
+
+def concat_videos(v1, v2, out):
+    list_file = os.path.join(OUTPUT_DIR, "concat.txt")
+    with open(list_file, "w") as f:
+        f.write(f"file '{v1}'\nfile '{v2}'\n")
+    cmd = ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_file, "-c", "copy", out]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    return r.returncode == 0
+
+
+def wait_for_prompt(prompt_id, timeout=1800):
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            h = get_history(prompt_id)
+            if prompt_id in h:
+                s = h[prompt_id].get("status", {})
+                if s.get("status_str") == "success":
+                    return h[prompt_id]
+                elif s.get("status_str") == "error":
+                    print(f"❌ Error: {s}")
+                    return None
+        except:
+            pass
+        time.sleep(2)
+    return None
+
+
+def get_output_video(history_result):
+    outputs = history_result.get("outputs", {})
+    for nid, out in outputs.items():
+        if "vhs_filenames" in out:
+            for f in out["vhs_filenames"]:
+                return f["filename"]
+    return None
+
+
+print("=" * 60)
+print("🎬 Wan2.2-TI2V-5B — 15秒文生视频")
+print("=" * 60)
+
+print("\n🎬 [1/4] 第一段 T2V...")
+t1 = time.time()
+wf1 = build_t2v_workflow(PROMPT, NEGATIVE_PROMPT, WIDTH, HEIGHT, SEGMENT1_FRAMES, SEGMENT1_STEPS, CFG, SEED)
+r1 = queue_prompt(wf1)
+pid1 = r1["prompt_id"]
+h1 = wait_for_prompt(pid1)
+if not h1:
+    print("❌ 第一段失败!")
+    sys.exit(1)
+v1_fn = get_output_video(h1)
+v1_path = os.path.join(OUTPUT_DIR, v1_fn) if v1_fn else None
+print(f"  ✅ ({time.time()-t1:.0f}s) {v1_path}")
+
+print("\n🖼️ [2/4] 提取末帧...")
+last_frame = os.path.join(OUTPUT_DIR, "last_frame.jpg")
+if v1_path:
+    extract_last_frame(v1_path, last_frame)
+
+print("\n🎬 [3/4] 第二段 TI2V...")
+t2 = time.time()
+wf2 = build_ti2v_workflow(PROMPT, NEGATIVE_PROMPT, WIDTH, HEIGHT, SEGMENT2_FRAMES, SEGMENT2_STEPS, CFG, SEED + 1, last_frame)
+r2 = queue_prompt(wf2)
+pid2 = r2["prompt_id"]
+h2 = wait_for_prompt(pid2)
+if not h2:
+    print("❌ 第二段失败!")
+    sys.exit(1)
+v2_fn = get_output_video(h2)
+v2_path = os.path.join(OUTPUT_DIR, v2_fn) if v2_fn else None
+print(f"  ✅ ({time.time()-t2:.0f}s) {v2_path}")
+
+print("\n🔗 [4/4] 拼接...")
+final = os.path.join(OUTPUT_DIR, "final_15s.mp4")
+if v1_path and v2_path and concat_videos(v1_path, v2_path, final):
+    size = os.path.getsize(final) / 1024 / 1024
+    print(f"\n🎉 完成! {final} ({size:.1f}MB, {time.time()-t1:.0f}s)")
+    print(f"📐 {SEGMENT1_FRAMES+SEGMENT2_FRAMES}帧 ≈ {(SEGMENT1_FRAMES+SEGMENT2_FRAMES)/FPS:.1f}秒")
+else:
+    print("❌ 拼接失败")

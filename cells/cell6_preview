@@ -1,0 +1,2 @@
+from IPython.display import Video, display
+display(Video("/kaggle/working/output/final_15s.mp4", embed=True))

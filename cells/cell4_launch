@@ -1,0 +1,20 @@
+import subprocess, time, urllib.request
+
+try:
+    urllib.request.urlopen("http://127.0.0.1:8188/system_stats", timeout=2)
+    print("✅ ComfyUI 已在运行")
+except:
+    print("🚀 启动 ComfyUI...")
+    proc = subprocess.Popen(
+        ["python", "main.py", "--dont-print-server", "--highvram",
+         "--preview-method", "none", "--port", "8188"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+    for i in range(60):
+        time.sleep(5)
+        try:
+            urllib.request.urlopen("http://127.0.0.1:8188/system_stats", timeout=2)
+            print(f"  ✅ 就绪 ({(i+1)*5}s)")
+            break
+        except:
+            print(f"  ⏳ 等待... ({(i+1)*5}s)")
