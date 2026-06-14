@@ -1,14 +1,14 @@
+# ===== Cell 1: 安装 =====
+# ⚠️ 把下面的 token 替换成你的 GitHub Personal Access Token
+# 获取方式: GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+# 只需要勾选 repo 权限即可
+GITHUB_TOKEN = "PASTE_YOUR_TOKEN_HERE"
+
 !pip install -q torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-!curl -sL "https://github.com/comfyanonymous/ComfyUI/archive/refs/heads/master.zip" -o /tmp/comfyui.zip
-!unzip -qo /tmp/comfyui.zip -d /kaggle/working/
-!mv /kaggle/working/ComfyUI-master /kaggle/working/ComfyUI
-!rm /tmp/comfyui.zip
-%cd /kaggle/working/ComfyUI
+!git clone -q https://{GITHUB_TOKEN}@github.com/comfyanonymous/ComfyUI.git
+%cd ComfyUI
 !pip install -q -r requirements.txt
 !pip install -q xformers gguf accelerate Pillow
-!curl -sL "https://github.com/city96/ComfyUI-GGUF/archive/refs/heads/main.zip" -o /tmp/gguf.zip
-!unzip -qo /tmp/gguf.zip -d custom_nodes/
-!mv custom_nodes/ComfyUI-GGUF-main custom_nodes/ComfyUI-GGUF
-!rm /tmp/gguf.zip
+!git clone -q https://{GITHUB_TOKEN}@github.com/city96/ComfyUI-GGUF.git custom_nodes/ComfyUI-GGUF
 !ls custom_nodes/
 print("✅ 安装完成")

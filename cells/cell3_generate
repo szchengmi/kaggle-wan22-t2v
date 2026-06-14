@@ -1,4 +1,4 @@
-%%writefile /kaggle/working/ComfyUI/generate_15s.py
+%%writefile ComfyUI/generate_15s.py
 import json, time, os, sys, urllib.request, subprocess
 
 COMFYUI_URL = "http://127.0.0.1:8188"
@@ -108,7 +108,7 @@ def wait_for_prompt(prompt_id, timeout=1800):
                 if s.get("status_str") == "success":
                     return h[prompt_id]
                 elif s.get("status_str") == "error":
-                    print(f"❌ Error: {s}")
+                    print(f"Error: {s}")
                     return None
         except:
             pass
@@ -126,45 +126,45 @@ def get_output_video(history_result):
 
 
 print("=" * 60)
-print("🎬 Wan2.2-TI2V-5B — 15秒文生视频")
+print("Wan2.2-TI2V-5B — 15s video generation")
 print("=" * 60)
 
-print("\n🎬 [1/4] 第一段 T2V...")
+print("\n[1/4] Segment 1: T2V...")
 t1 = time.time()
 wf1 = build_t2v_workflow(PROMPT, NEGATIVE_PROMPT, WIDTH, HEIGHT, SEGMENT1_FRAMES, SEGMENT1_STEPS, CFG, SEED)
 r1 = queue_prompt(wf1)
 pid1 = r1["prompt_id"]
 h1 = wait_for_prompt(pid1)
 if not h1:
-    print("❌ 第一段失败!")
+    print("Segment 1 failed!")
     sys.exit(1)
 v1_fn = get_output_video(h1)
 v1_path = os.path.join(OUTPUT_DIR, v1_fn) if v1_fn else None
-print(f"  ✅ ({time.time()-t1:.0f}s) {v1_path}")
+print(f"  Done ({time.time()-t1:.0f}s) {v1_path}")
 
-print("\n🖼️ [2/4] 提取末帧...")
+print("\n[2/4] Extract last frame...")
 last_frame = os.path.join(OUTPUT_DIR, "last_frame.jpg")
 if v1_path:
     extract_last_frame(v1_path, last_frame)
 
-print("\n🎬 [3/4] 第二段 TI2V...")
+print("\n[3/4] Segment 2: TI2V...")
 t2 = time.time()
 wf2 = build_ti2v_workflow(PROMPT, NEGATIVE_PROMPT, WIDTH, HEIGHT, SEGMENT2_FRAMES, SEGMENT2_STEPS, CFG, SEED + 1, last_frame)
 r2 = queue_prompt(wf2)
 pid2 = r2["prompt_id"]
 h2 = wait_for_prompt(pid2)
 if not h2:
-    print("❌ 第二段失败!")
+    print("Segment 2 failed!")
     sys.exit(1)
 v2_fn = get_output_video(h2)
 v2_path = os.path.join(OUTPUT_DIR, v2_fn) if v2_fn else None
-print(f"  ✅ ({time.time()-t2:.0f}s) {v2_path}")
+print(f"  Done ({time.time()-t2:.0f}s) {v2_path}")
 
-print("\n🔗 [4/4] 拼接...")
+print("\n[4/4] Concat...")
 final = os.path.join(OUTPUT_DIR, "final_15s.mp4")
 if v1_path and v2_path and concat_videos(v1_path, v2_path, final):
     size = os.path.getsize(final) / 1024 / 1024
-    print(f"\n🎉 完成! {final} ({size:.1f}MB, {time.time()-t1:.0f}s)")
-    print(f"📐 {SEGMENT1_FRAMES+SEGMENT2_FRAMES}帧 ≈ {(SEGMENT1_FRAMES+SEGMENT2_FRAMES)/FPS:.1f}秒")
+    print(f"\nDone! {final} ({size:.1f}MB, {time.time()-t1:.0f}s)")
+    print(f"{SEGMENT1_FRAMES+SEGMENT2_FRAMES} frames = {(SEGMENT1_FRAMES+SEGMENT2_FRAMES)/FPS:.1f}s")
 else:
-    print("❌ 拼接失败")
+    print("Concat failed")

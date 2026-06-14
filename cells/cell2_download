@@ -1,0 +1,7 @@
+!apt-get install -y -qq aria2 2>/dev/null
+!mkdir -p ComfyUI/models/diffusion_models ComfyUI/models/text_encoders ComfyUI/models/vae
+!aria2c -x 8 -s 8 -k 1M --async-dns=false -d ComfyUI/models/diffusion_models -o Wan2.2-TI2V-5B-Q4_K_M.gguf "https://hf-mirror.com/QuantStack/Wan2.2-TI2V-5B-GGUF/resolve/main/Q4_K_M/Wan2.2-TI2V-5B-Q4_K_M.gguf"
+!aria2c -x 8 -s 8 -k 1M --async-dns=false -d ComfyUI/models/text_encoders -o umt5-xxl-encoder-Q4_K_M.gguf "https://hf-mirror.com/city96/umt5-xxl-encoder-gguf/resolve/main/Q4_K_M/umt5-xxl-encoder-Q4_K_M.gguf"
+!aria2c -x 8 -s 8 -k 1M --async-dns=false -d ComfyUI/models/vae -o Wan2.2_VAE.safetensors "https://hf-mirror.com/QuantStack/Wan2.2-TI2V-5B-GGUF/resolve/main/VAE/Wan2.2_VAE.safetensors"
+print("✅ 模型下载完成")
+!ls -lh ComfyUI/models/diffusion_models/ ComfyUI/models/text_encoders/ ComfyUI/models/vae/
